@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
-import { Subject, takeUntil, finalize } from 'rxjs';
+import { Subject, takeUntil, finalize, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { UserProfileService, UserProfile, UpdateProfileRequest } from '../../services/user-profile.service';
 import { AuthService } from '../../services/auth.service';
+import { QueryState } from '../../services/query.service';
 
 @Component({
   selector: 'app-account-form',
@@ -24,23 +26,23 @@ import { AuthService } from '../../services/auth.service';
       </div>
 
       <!-- Loading State -->
-      <div *ngIf="isLoading" class="loading-state">
+      <div *ngIf="isLoading$ | async" class="loading-state">
         <div class="loading-spinner"></div>
         <p class="loading-text">Loading your profile...</p>
       </div>
 
       <!-- Main Content -->
-      <div *ngIf="!isLoading" class="account-content">
+      <div *ngIf="!(isLoading$ | async)" class="account-content">
         
         <!-- Error Message -->
-        <div *ngIf="errorMessage" class="error-banner">
+        <div *ngIf="isError$ | async" class="error-banner">
           <div class="error-content">
             <svg class="error-icon" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
             </svg>
             <div class="error-text">
-              <p class="error-message">{{ errorMessage }}</p>
-              <button type="button" class="retry-btn" (click)="loadProfile()">Retry</button>
+              <p class="error-message">{{ errorMessage$ | async }}</p>
+              <button type="button" class="retry-btn" (click)="refreshProfile()">Retry</button>
             </div>
           </div>
         </div>
@@ -704,11 +706,19 @@ import { AuthService } from '../../services/auth.service';
 })
 export class AccountFormComponent implements OnInit, OnDestroy {
   accountForm: FormGroup;
-  isLoading = false;
   isSubmitting = false;
-  errorMessage: string | null = null;
   successMessage: string | null = null;
   private destroy$ = new Subject<void>();
+
+  // Query state properties
+  queryState$!: Observable<QueryState<UserProfile>>;
+  isLoading$!: Observable<boolean>;
+  isError$!: Observable<boolean>;
+  errorMessage$!: Observable<string | null>;
+  profileData$!: Observable<UserProfile | null>;
+
+  // Store the current profile locally to avoid cache timing issues
+  private currentProfile: UserProfile | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -722,7 +732,25 @@ export class AccountFormComponent implements OnInit, OnDestroy {
     console.log('AccountFormComponent initialized');
     console.log('Auth service isAuthenticated:', this.authService.isAuthenticated());
     console.log('Current user:', this.authService.getCurrentUser());
-    this.loadProfile();
+    
+    // Initialize query state observables
+    this.queryState$ = this.userProfileService.getUserProfile();
+    this.isLoading$ = this.queryState$.pipe(map((state: QueryState<UserProfile>) => state.isLoading));
+    this.isError$ = this.queryState$.pipe(map((state: QueryState<UserProfile>) => state.isError));
+    this.errorMessage$ = this.queryState$.pipe(map((state: QueryState<UserProfile>) => state.error?.message || null));
+    this.profileData$ = this.queryState$.pipe(map((state: QueryState<UserProfile>) => state.data));
+
+    // Subscribe to profile data changes to populate form and store locally
+    this.profileData$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe((profile: UserProfile | null) => {
+      if (profile) {
+        this.currentProfile = profile; // Store the profile locally
+        this.populateForm(profile);
+      } else {
+        this.currentProfile = null;
+      }
+    });
   }
 
   ngOnDestroy() {
@@ -735,8 +763,8 @@ export class AccountFormComponent implements OnInit, OnDestroy {
       firstName: ['', [Validators.required, Validators.minLength(2)]],
       lastName: ['', [Validators.required, Validators.minLength(2)]],
       email: [{value: '', disabled: true}, [Validators.required, Validators.email]], // Email is read-only
-      phone: ['', [Validators.required, Validators.pattern(/^[\+]?[1-9][\d]{0,15}$/)]],
-      dateOfBirth: ['', [Validators.required, this.futureDateValidator]],
+      phone: ['', [Validators.pattern(/^[\+]?[1-9][\d]{0,15}$/)]], // Made optional
+      dateOfBirth: ['', [this.futureDateValidator]], // Made optional
       street: ['', [Validators.required]],
       city: ['', [Validators.required]],
       state: ['', [Validators.required]],
@@ -760,64 +788,14 @@ export class AccountFormComponent implements OnInit, OnDestroy {
     return !!(field && field.invalid && (field.dirty || field.touched));
   }
 
-  loadProfile(): void {
-    // Check if user is authenticated first
-    if (!this.authService.isAuthenticated()) {
-      this.errorMessage = 'Please log in to view your profile.';
-      this.isLoading = false;
-      return;
-    }
-
-    this.isLoading = true;
-    this.errorMessage = null;
-
-    console.log('Loading user profile...');
-    
-    this.userProfileService.getUserProfile()
-      .pipe(
-        takeUntil(this.destroy$),
-        finalize(() => this.isLoading = false)
-      )
-      .subscribe({
-        next: (profile) => {
-          console.log('Profile loaded successfully:', profile);
-          this.populateForm(profile);
-        },
-        error: (error) => {
-          console.error('Error loading profile:', error);
-          this.errorMessage = 'Failed to load profile. Please try again.';
-          // Show a fallback form with basic fields
-          this.showFallbackForm();
-        }
-      });
-  }
-
-  showFallbackForm(): void {
-    // Populate form with basic user data from auth service
-    const currentUser = this.authService.getCurrentUser();
-    if (currentUser) {
-      this.accountForm.patchValue({
-        email: currentUser.email,
-        firstName: currentUser.username || '',
-        lastName: '',
-        phone: '',
-        dateOfBirth: '',
-        street: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        country: ''
-      });
-    }
-  }
 
   populateForm(profile: UserProfile): void {
     this.accountForm.patchValue({
       firstName: profile.firstName,
       lastName: profile.lastName,
       email: profile.email,
-      phone: profile.phoneNumber,
-      dateOfBirth: profile.dateOfBirth,
+      phone: profile.phoneNumber || '',
+      dateOfBirth: profile.dateOfBirth || '',
       street: profile.address?.line1 || '',
       city: profile.address?.city || '',
       state: profile.address?.state || '',
@@ -827,7 +805,10 @@ export class AccountFormComponent implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
+    console.log('onSubmit called');
+    
     if (this.accountForm.invalid) {
+      console.log('Form is invalid');
       // Mark all fields as touched to show validation errors
       Object.keys(this.accountForm.controls).forEach(key => {
         this.accountForm.get(key)?.markAsTouched();
@@ -836,14 +817,17 @@ export class AccountFormComponent implements OnInit, OnDestroy {
     }
 
     this.isSubmitting = true;
-    this.errorMessage = null;
     this.successMessage = null;
 
     const formValue = this.accountForm.value;
-    const currentProfile = this.userProfileService.getCurrentProfile();
+    // Use the locally stored currentProfile instead of querying the service
+    const currentProfile = this.currentProfile;
+
+    console.log('Form value:', formValue);
+    console.log('Current profile:', currentProfile);
 
     if (!currentProfile) {
-      this.errorMessage = 'No profile data available';
+      console.log('No current profile found - this should not happen if form is populated');
       this.isSubmitting = false;
       return;
     }
@@ -852,8 +836,8 @@ export class AccountFormComponent implements OnInit, OnDestroy {
       id: currentProfile.id,
       firstName: formValue.firstName,
       lastName: formValue.lastName,
-      phoneNumber: formValue.phone || '',
-      dateOfBirth: formValue.dateOfBirth || '',
+      phoneNumber: formValue.phone || null,
+      dateOfBirth: formValue.dateOfBirth || null,
       createdAt: currentProfile.createdAt,
       updatedAt: currentProfile.updatedAt,
       address: {
@@ -865,33 +849,44 @@ export class AccountFormComponent implements OnInit, OnDestroy {
       }
     };
 
-    // Use retry mechanism for address updates (distributed transaction)
-    this.userProfileService.updateAddressWithRetry(updateData)
-      .pipe(
-        takeUntil(this.destroy$),
-        finalize(() => this.isSubmitting = false)
-      )
-      .subscribe({
-        next: (updatedProfile) => {
-          this.successMessage = 'Your profile has been updated successfully!';
-          this.populateForm(updatedProfile);
-        },
-        error: (error) => {
-          console.error('Error updating profile:', error);
-          this.errorMessage = 'Failed to update profile. Please try again.';
-        }
-      });
+    console.log('Update data:', updateData);
+
+    // Use the new mutation-based update with automatic cache invalidation
+    console.log('Calling updateProfile...');
+    const mutation = this.userProfileService.updateProfile(updateData);
+    
+    console.log('Mutation result:', mutation);
+    
+    mutation.pipe(
+      takeUntil(this.destroy$),
+      finalize(() => {
+        console.log('Mutation completed');
+        this.isSubmitting = false;
+      })
+    ).subscribe({
+      next: (result) => {
+        console.log('Profile update success:', result);
+        this.successMessage = 'Your profile has been updated successfully!';
+        // The form will automatically update when the cache is refreshed
+      },
+      error: (error) => {
+        console.error('Error updating profile:', error);
+      }
+    });
   }
 
   resetForm(): void {
-    const currentProfile = this.userProfileService.getCurrentProfile();
-    if (currentProfile) {
-      this.populateForm(currentProfile);
+    // Use the locally stored currentProfile for reset
+    if (this.currentProfile) {
+      this.populateForm(this.currentProfile);
     } else {
       this.accountForm.reset();
     }
-    this.errorMessage = null;
     this.successMessage = null;
+  }
+
+  refreshProfile(): void {
+    this.userProfileService.refreshProfile();
   }
 
   clearSuccessMessage(): void {

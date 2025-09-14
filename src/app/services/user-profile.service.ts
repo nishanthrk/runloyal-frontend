@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError, of } from 'rxjs';
-import { map, catchError, tap, retry, delay } from 'rxjs/operators';
+import { map, catchError, tap, retry, delay, switchMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
+import { QueryService, QueryState } from './query.service';
 
 export interface Address {
   id?: number;
@@ -35,8 +36,8 @@ export interface UpdateProfileRequest {
   id: number;
   firstName: string;
   lastName: string;
-  phoneNumber: string;
-  dateOfBirth: string;
+  phoneNumber: string | null;
+  dateOfBirth: string | null;
   createdAt: string;
   updatedAt: string;
   address: {
@@ -53,61 +54,66 @@ export interface UpdateProfileRequest {
 })
 export class UserProfileService {
   private readonly API_BASE_URL = 'http://localhost:8082/api/users';
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-  private profileSubject = new BehaviorSubject<UserProfile | null>(null);
-  private lastFetchTime = 0;
-  private isLoadingSubject = new BehaviorSubject<boolean>(false);
-  private errorSubject = new BehaviorSubject<string | null>(null);
-
-  public profile$ = this.profileSubject.asObservable();
-  public isLoading$ = this.isLoadingSubject.asObservable();
-  public error$ = this.errorSubject.asObservable();
+  private readonly QUERY_KEY = 'user-profile';
 
   constructor(
     private http: HttpClient,
-    private authService: AuthService
+    private authService: AuthService,
+    private queryService: QueryService
   ) {}
 
   /**
-   * Get user profile with caching
+   * Get user profile with TanStack Query-like caching
    */
-  getUserProfile(forceRefresh: boolean = false): Observable<UserProfile> {
-    const now = Date.now();
-    const isCacheValid = !forceRefresh && 
-                        (now - this.lastFetchTime) < this.CACHE_DURATION && 
-                        this.profileSubject.value;
-
-    if (isCacheValid) {
-      return of(this.profileSubject.value!);
-    }
-
-    this.isLoadingSubject.next(true);
-    this.errorSubject.next(null);
-
+  getUserProfile(forceRefresh: boolean = false): Observable<QueryState<UserProfile>> {
     const userId = this.getCurrentUserId();
     if (!userId) {
-      this.errorSubject.next('User not authenticated');
-      this.isLoadingSubject.next(false);
       return throwError(() => new Error('User not authenticated'));
     }
 
+    const queryKey = `${this.QUERY_KEY}-${userId}`;
+    
+    if (forceRefresh) {
+      this.queryService.invalidateQuery(queryKey);
+    }
+
+    return this.queryService.useQuery(
+      queryKey,
+      () => this.fetchUserProfile(userId),
+      {
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        cacheTime: 5 * 60 * 1000, // 5 minutes
+        refetchOnWindowFocus: true,
+        retry: 3
+      }
+    );
+  }
+
+  /**
+   * Get user profile data (just the data, not the query state)
+   */
+  getUserProfileData(): Observable<UserProfile> {
+    return this.getUserProfile().pipe(
+      map(queryState => {
+        if (queryState.data) {
+          return queryState.data;
+        }
+        throw new Error('No profile data available');
+      })
+    );
+  }
+
+  /**
+   * Fetch user profile from API
+   */
+  private fetchUserProfile(userId: number): Observable<UserProfile> {
     return this.http.get<UserProfile>(`${this.API_BASE_URL}/${userId}`, {
       headers: this.getAuthHeaders()
     }).pipe(
-      tap(profile => {
-        this.profileSubject.next(profile);
-        this.lastFetchTime = now;
-        this.isLoadingSubject.next(false);
-      }),
       catchError(error => {
         console.error('Profile fetch error:', error);
         // Return mock data for development/testing
-        const mockProfile = this.createMockProfile(userId);
-        this.profileSubject.next(mockProfile);
-        this.lastFetchTime = now;
-        this.isLoadingSubject.next(false);
-        return of(mockProfile);
+        return of(this.createMockProfile(userId));
       })
     );
   }
@@ -141,68 +147,121 @@ export class UserProfileService {
   }
 
   /**
-   * Update user profile with optimistic updates
+   * Update user profile with TanStack Query-like mutations
    */
-  updateProfile(updateData: UpdateProfileRequest): Observable<UserProfile> {
-    const currentProfile = this.profileSubject.value;
-    if (!currentProfile) {
-      return throwError(() => new Error('No profile data available'));
-    }
-
-    // Optimistic update
-    const optimisticProfile: UserProfile = {
-      ...currentProfile,
-      firstName: updateData.firstName,
-      lastName: updateData.lastName,
-      phoneNumber: updateData.phoneNumber,
-      dateOfBirth: updateData.dateOfBirth,
-      updatedAt: new Date().toISOString(),
-      address: {
-        ...currentProfile.address,
-        line1: updateData.address.street,
-        city: updateData.address.city,
-        state: updateData.address.state,
-        postalCode: updateData.address.zipCode,
-        country: updateData.address.country,
-        updatedAt: new Date().toISOString()
-      }
-    };
-
-    this.profileSubject.next(optimisticProfile);
-    this.isLoadingSubject.next(true);
-    this.errorSubject.next(null);
-
+  updateProfile(updateData: UpdateProfileRequest) {
+    console.log('UserProfileService.updateProfile called with:', updateData);
+    
     const userId = this.getCurrentUserId();
     if (!userId) {
-      this.revertOptimisticUpdate(currentProfile);
+      console.log('No user ID found');
       return throwError(() => new Error('User not authenticated'));
     }
 
-    return this.http.put<UserProfile>(`${this.API_BASE_URL}/${userId}/profile`, updateData, {
+    console.log('User ID:', userId);
+    const queryKey = `${this.QUERY_KEY}-${userId}`;
+    const currentProfile = this.queryService.getQueryData(queryKey);
+    
+    console.log('Query key:', queryKey);
+    console.log('Current profile from cache:', currentProfile);
+
+    // For now, let's use a direct HTTP call to test if the issue is with QueryService
+    console.log('Using direct HTTP call for testing...');
+    return this.performProfileUpdate(updateData, userId).pipe(
+      tap(response => {
+        console.log('Direct HTTP call successful, invalidating cache...');
+        this.queryService.invalidateQuery(queryKey);
+      })
+    );
+
+    // TODO: Re-enable QueryService mutation once direct call works
+    /*
+    const mutation = this.queryService.useMutation(
+      (data: UpdateProfileRequest) => this.performProfileUpdate(data, userId),
+      {
+        onMutate: (variables) => {
+          // Optimistic update
+          if (currentProfile && typeof currentProfile === 'object' && 'id' in currentProfile) {
+            const defaultAddress = {
+              id: 1,
+              userId: (currentProfile as UserProfile).id,
+              line1: '',
+              line2: null,
+              city: '',
+              state: '',
+              country: '',
+              postalCode: '',
+              isPrimary: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+
+            const profile = currentProfile as UserProfile;
+            const optimisticProfile: UserProfile = {
+              ...profile,
+              firstName: variables.firstName,
+              lastName: variables.lastName,
+              phoneNumber: variables.phoneNumber,
+              dateOfBirth: variables.dateOfBirth,
+              updatedAt: new Date().toISOString(),
+              address: {
+                ...(profile.address || defaultAddress),
+                line1: variables.address.street,
+                city: variables.address.city,
+                state: variables.address.state,
+                postalCode: variables.address.zipCode,
+                country: variables.address.country,
+                updatedAt: new Date().toISOString()
+              }
+            };
+            this.queryService.setQueryData(queryKey, optimisticProfile);
+          }
+        },
+        onSuccess: (data) => {
+          // After successful update, refetch the profile to get the latest data
+          // This ensures we have the complete data including any server-side changes
+          this.queryService.invalidateQuery(queryKey);
+        },
+        onError: (error, variables) => {
+          console.error('Profile update error:', error);
+          // The optimistic update will be automatically reverted by the query service
+        }
+      }
+    );
+
+    return mutation.mutate(updateData);
+    */
+  }
+
+  /**
+   * Perform the actual profile update API call
+   */
+  private performProfileUpdate(updateData: UpdateProfileRequest, userId: number): Observable<UserProfile> {
+    console.log('performProfileUpdate called with:', updateData, 'userId:', userId);
+    const url = `${this.API_BASE_URL}/${userId}/profile`;
+    console.log('PUT request to:', url);
+    
+    return this.http.put<UserProfile>(url, updateData, {
       headers: this.getAuthHeaders()
     }).pipe(
-      tap(updatedProfile => {
-        // Update with actual server response
-        this.profileSubject.next(updatedProfile);
-        this.lastFetchTime = Date.now();
-        this.isLoadingSubject.next(false);
-      }),
+      tap(response => console.log('PUT response:', response)),
       catchError(error => {
-        // Revert optimistic update on error
-        this.revertOptimisticUpdate(currentProfile);
-        this.errorSubject.next('Failed to update profile');
-        this.isLoadingSubject.next(false);
-        console.error('Profile update error:', error);
+        console.error('PUT error:', error);
         return throwError(() => error);
       })
     );
   }
 
   /**
-   * Handle distributed transaction for address updates
+   * Handle distributed transaction for address updates with retry
    */
   updateAddressWithRetry(updateData: UpdateProfileRequest, maxRetries: number = 3): Observable<UserProfile> {
-    return this.updateProfile(updateData).pipe(
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      return throwError(() => new Error('User not authenticated'));
+    }
+
+    return this.performProfileUpdate(updateData, userId).pipe(
       retry({
         count: maxRetries,
         delay: (error, retryCount) => {
@@ -211,10 +270,14 @@ export class UserProfileService {
           return of(null).pipe(delay(Math.pow(2, retryCount - 1) * 1000));
         }
       }),
+      tap(() => {
+        // After successful update, invalidate and refetch the profile
+        const queryKey = `${this.QUERY_KEY}-${userId}`;
+        this.queryService.invalidateQuery(queryKey);
+      }),
       catchError(error => {
-        // After all retries failed, refresh profile to get latest state
-        console.error('Address update failed after retries, refreshing profile');
-        return this.getUserProfile(true);
+        console.error('Address update failed after retries:', error);
+        return throwError(() => error);
       })
     );
   }
@@ -222,7 +285,7 @@ export class UserProfileService {
   /**
    * Refresh profile data from server
    */
-  refreshProfile(): Observable<UserProfile> {
+  refreshProfile(): Observable<QueryState<UserProfile>> {
     return this.getUserProfile(true);
   }
 
@@ -230,16 +293,23 @@ export class UserProfileService {
    * Clear cached profile data
    */
   clearCache(): void {
-    this.profileSubject.next(null);
-    this.lastFetchTime = 0;
-    this.errorSubject.next(null);
+    const userId = this.getCurrentUserId();
+    if (userId) {
+      const queryKey = `${this.QUERY_KEY}-${userId}`;
+      this.queryService.invalidateQuery(queryKey);
+    }
   }
 
   /**
    * Get current profile value
    */
   getCurrentProfile(): UserProfile | null {
-    return this.profileSubject.value;
+    const userId = this.getCurrentUserId();
+    if (userId) {
+      const queryKey = `${this.QUERY_KEY}-${userId}`;
+      return this.queryService.getQueryData(queryKey);
+    }
+    return null;
   }
 
   private getCurrentUserId(): number | null {
@@ -251,7 +321,4 @@ export class UserProfileService {
     return this.authService.getAuthHeaders();
   }
 
-  private revertOptimisticUpdate(originalProfile: UserProfile): void {
-    this.profileSubject.next(originalProfile);
-  }
 }
