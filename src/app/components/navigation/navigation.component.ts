@@ -53,7 +53,16 @@ export class NavigationComponent implements OnInit, OnDestroy {
   }
 
   logout() {
-    this.authService.logout();
-    this.router.navigate(['/login']);
+    this.authService.logout().subscribe({
+      next: (response) => {
+        console.log('Logout successful:', response.message);
+        this.router.navigate(['/login']);
+      },
+      error: (error) => {
+        console.error('Logout error:', error);
+        // Still navigate to login even if API call fails
+        this.router.navigate(['/login']);
+      }
+    });
   }
 }

@@ -35,6 +35,14 @@ export interface User {
   emailVerified: boolean | null;
 }
 
+export interface LogoutRequest {
+  refreshToken: string;
+}
+
+export interface LogoutResponse {
+  message: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -142,7 +150,39 @@ export class AuthService {
       );
   }
 
-  logout(): void {
+  logout(): Observable<LogoutResponse> {
+    const refreshToken = this.getRefreshToken();
+    
+    if (!refreshToken) {
+      // If no refresh token, just clear local storage
+      this.clearLocalStorage();
+      return new Observable(observer => {
+        observer.next({ message: 'Logged out locally' });
+        observer.complete();
+      });
+    }
+
+    const logoutRequest: LogoutRequest = {
+      refreshToken: refreshToken
+    };
+
+    return this.http.post<LogoutResponse>(`${this.API_BASE_URL}/logout`, logoutRequest, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      tap(() => {
+        // Clear local storage after successful logout
+        this.clearLocalStorage();
+      }),
+      catchError(error => {
+        // Even if API call fails, clear local storage
+        this.clearLocalStorage();
+        console.error('Logout API error:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  private clearLocalStorage(): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
