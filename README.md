@@ -114,16 +114,41 @@ The application connects to the following backend services:
 - **User Profile Service**: `http://localhost:8082/api/users`
 
 ### Environment Variables
-Create environment files for different configurations:
+The application uses environment files for configuration. Copy `env.example` to create your environment configuration:
 
+```bash
+cp env.example .env
+```
+
+**Development Environment** (`src/environments/environment.ts`):
 ```typescript
-// src/environments/environment.ts
 export const environment = {
   production: false,
   authApiUrl: 'http://localhost:8081/api/auth',
-  profileApiUrl: 'http://localhost:8082/api/users'
+  profileApiUrl: 'http://localhost:8082/api/users',
+  dummyJsonApiUrl: 'https://dummyjson.com',
+  dogApiUrl: 'https://dog.ceo/api'
 };
 ```
+
+**Production Environment** (`src/environments/environment.prod.ts`):
+```typescript
+export const environment = {
+  production: true,
+  authApiUrl: 'https://your-production-auth-api.com/api/auth',
+  profileApiUrl: 'https://your-production-profile-api.com/api/users',
+  dummyJsonApiUrl: 'https://dummyjson.com',
+  dogApiUrl: 'https://dog.ceo/api'
+};
+```
+
+### Environment Configuration
+Update the following URLs in your environment files:
+
+- **AUTH_API_URL**: Authentication service endpoint
+- **PROFILE_API_URL**: User profile service endpoint  
+- **DUMMY_JSON_API_URL**: DummyJSON API for todos
+- **DOG_API_URL**: Dog CEO API for dog images
 
 ## 🎨 Design System
 
@@ -226,45 +251,3 @@ The application is fully responsive with breakpoints:
 - **GET**: `/api/users/{userId}` - Fetch user profile
 - **PUT**: `/api/users/{userId}/profile` - Update profile
 - **Features**: Caching, optimistic updates, retry logic
-
-## 🚀 Deployment
-
-### Build for Production
-```bash
-ng build --configuration production
-```
-
-### Docker Deployment
-```dockerfile
-FROM node:16-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-RUN npm run build
-EXPOSE 4200
-CMD ["npm", "start"]
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-For support and questions:
-- Create an issue in the repository
-- Check the documentation
-- Review the code comments
-
----
-
-**Built with ❤️ using Angular and modern web technologies**

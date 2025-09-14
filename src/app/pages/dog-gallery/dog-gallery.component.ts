@@ -1,5 +1,6 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 interface DogResponse {
   message: string;
@@ -166,7 +167,7 @@ export class DogGalleryComponent implements OnInit {
 
     // Call the API 10 times to get 10 random dog images
     const requests = Array.from({ length: 10 }, (_, index) => 
-      this.http.get<DogResponse>('https://dog.ceo/api/breeds/image/random')
+      this.http.get<DogResponse>(`${environment.dogApiUrl}/breeds/image/random`)
     );
 
     // Execute all requests in parallel

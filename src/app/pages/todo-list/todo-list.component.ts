@@ -1,5 +1,6 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 interface Todo {
   id: number;
@@ -139,7 +140,7 @@ export class TodoListComponent implements OnInit {
   }
 
   private fetchTodos() {
-    const url = `https://dummyjson.com/todos?limit=${this.limit}&skip=${this.skip}`;
+    const url = `${environment.dummyJsonApiUrl}/todos?limit=${this.limit}&skip=${this.skip}`;
 
     this.http.get<TodoResponse>(url).subscribe({
       next: (response) => {

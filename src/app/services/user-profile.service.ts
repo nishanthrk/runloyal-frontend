@@ -4,6 +4,7 @@ import { BehaviorSubject, Observable, throwError, of } from 'rxjs';
 import { map, catchError, tap, retry, delay, switchMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 import { QueryService, QueryState } from './query.service';
+import { environment } from '../../environments/environment';
 
 export interface Address {
   id?: number;
@@ -53,7 +54,7 @@ export interface UpdateProfileRequest {
   providedIn: 'root'
 })
 export class UserProfileService {
-  private readonly API_BASE_URL = 'http://localhost:8082/api/users';
+  private readonly API_BASE_URL = environment.profileApiUrl;
   private readonly QUERY_KEY = 'user-profile';
 
   constructor(
