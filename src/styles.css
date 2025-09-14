@@ -25,11 +25,11 @@
   }
   
   .glass-button-green {
-    @apply bg-green-500 border border-green-500 rounded-lg px-6 py-3 text-white font-semibold transition-all duration-300 hover:bg-green-600 hover:scale-105;
+    @apply bg-blue-500 border border-blue-500 rounded-lg px-6 py-3 text-white font-semibold transition-all duration-300 hover:bg-blue-600 hover:scale-105;
   }
   
   .glass-input {
-    @apply bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500;
+    @apply bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500;
   }
   
   .shimmer {
@@ -200,7 +200,7 @@
 
 .nav-brand::before {
   content: "🐾";
-  @apply text-green-500 text-lg;
+  @apply text-blue-500 text-lg;
 }
 
 .nav-links {

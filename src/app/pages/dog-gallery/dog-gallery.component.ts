@@ -29,43 +29,10 @@ interface DogImage {
           <p class="text-gray-600 mb-6">Discover adorable dogs with infinite scroll and search</p>
         </div>
 
-        <!-- Search bar -->
-        <div class="bg-white rounded-2xl shadow-xl p-6 mb-8">
-            <div class="flex flex-col lg:flex-row gap-6 items-center justify-between">
-              <div class="flex-1 max-w-md">
-                <div class="relative">
-                  <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <path d="m21 21-4.35-4.35"></path>
-                  </svg>
-                  <input 
-                    type="text" 
-                    class="glass-input w-full pl-12" 
-                    placeholder="Search dogs by breed, color, etc..."
-                    [(ngModel)]="searchTerm"
-                    (input)="onSearchChange()">
-                </div>
-              </div>
-              <div class="flex items-center gap-4">
-                <button class="glass-button flex items-center gap-2">
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                  </svg>
-                  Settings
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Loading state -->
-          <div *ngIf="loading" class="flex flex-col items-center justify-center py-16">
-            <div class="spinner"></div>
-            <p class="text-gray-600 mt-4">Fetching adorable dog images...</p>
-          </div>
+        
 
           <!-- Masonry Grid -->
-          <div *ngIf="!loading && filteredDogs.length > 0" class="masonry-grid">
+          <div *ngIf="filteredDogs.length > 0" class="masonry-grid">
             <div 
               *ngFor="let dog of filteredDogs; trackBy: trackByDogId" 
               class="masonry-item"
@@ -110,7 +77,7 @@ interface DogImage {
           <!-- Loading more indicator -->
           <div *ngIf="loadingMore" class="flex flex-col items-center justify-center py-12">
             <div class="spinner"></div>
-            <p class="text-gray-600 mt-4">Loading more adorable dogs...</p>
+            <p class="text-gray-600 mt-4">Loading more dogs...</p>
           </div>
 
           <!-- End of content indicator -->
@@ -122,7 +89,7 @@ interface DogImage {
           </div>
 
           <!-- Empty state -->
-          <div *ngIf="!loading && filteredDogs.length === 0" class="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div *ngIf="filteredDogs.length === 0" class="bg-white rounded-2xl shadow-xl p-8 text-center">
             <div class="text-6xl mb-4">🐕</div>
             <h3 class="text-2xl font-bold text-gray-800 mb-2">No dogs found</h3>
             <p class="text-gray-600 mb-6">Try adjusting your search or load some new dogs!</p>
@@ -158,7 +125,7 @@ export class DogGalleryComponent implements OnInit {
 
   @HostListener('window:scroll', ['$event'])
   onScroll() {
-    if (this.isNearBottom() && !this.loadingMore && !this.hasReachedEnd && !this.loading) {
+    if (this.isNearBottom() && !this.loadingMore && !this.hasReachedEnd) {
       this.loadMoreDogs();
     }
   }
@@ -171,7 +138,6 @@ export class DogGalleryComponent implements OnInit {
   }
 
   loadDogs() {
-    this.loading = true;
     this.error = null;
     this.dogs = [];
     this.filteredDogs = [];
@@ -235,7 +201,6 @@ export class DogGalleryComponent implements OnInit {
         });
 
         this.filteredDogs = this.dogs;
-        this.loading = false;
         this.loadingMore = false;
 
         // Simulate reaching end after loading 50 dogs (5 batches of 10)
@@ -245,7 +210,6 @@ export class DogGalleryComponent implements OnInit {
       })
       .catch(error => {
         this.error = error.message || 'Failed to load dog images';
-        this.loading = false;
         this.loadingMore = false;
       });
   }

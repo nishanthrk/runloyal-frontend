@@ -11,19 +11,6 @@ import { QueryState } from '../../services/query.service';
   template: `
     <div class="account-container">
       <!-- Header Section -->
-      <div class="account-header">
-        <div class="header-content">
-          <div class="header-icon">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-            </svg>
-          </div>
-          <div class="header-text">
-            <h1 class="header-title">Account Details</h1>
-            <p class="header-subtitle">Manage your personal information and account settings</p>
-          </div>
-        </div>
-      </div>
 
       <!-- Loading State -->
       <div *ngIf="isLoading$ | async" class="loading-state">
@@ -142,7 +129,7 @@ import { QueryState } from '../../services/query.service';
 
               <div class="form-field">
                 <label for="dateOfBirth" class="field-label">
-                  Date of Birth <span class="required">*</span>
+                  Date of Birth
                 </label>
                 <input 
                   type="date" 
@@ -151,13 +138,14 @@ import { QueryState } from '../../services/query.service';
                   class="field-input"
                   [class.field-error]="isFieldInvalid('dateOfBirth')">
                 <div *ngIf="isFieldInvalid('dateOfBirth')" class="field-error-message">
-                  <span *ngIf="accountForm.get('dateOfBirth')?.errors?.['required']">
-                    Date of birth is required
-                  </span>
                   <span *ngIf="accountForm.get('dateOfBirth')?.errors?.['futureDate']">
                     Date of birth cannot be in the future
                   </span>
                 </div>
+              </div>
+
+              <div class="form-field">
+                <!-- Empty field for spacing in three-column layout -->
               </div>
             </div>
           </div>
@@ -174,8 +162,8 @@ import { QueryState } from '../../services/query.service';
               <h2 class="section-title">Address Information</h2>
             </div>
             
-            <div class="form-grid">
-              <div class="form-field form-field-full">
+            <div class="form-grid-three">
+              <div class="form-field">
                 <label for="street" class="field-label">
                   Street Address <span class="required">*</span>
                 </label>
@@ -319,10 +307,9 @@ import { QueryState } from '../../services/query.service';
   `,
   styles: [`
     .account-container {
-      max-width: 800px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 2rem;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
     }
 
@@ -346,7 +333,7 @@ import { QueryState } from '../../services/query.service';
     .header-icon {
       width: 48px;
       height: 48px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #3b82f6;
       border-radius: 12px;
       display: flex;
       align-items: center;
@@ -405,7 +392,7 @@ import { QueryState } from '../../services/query.service';
 
     /* Error Banner */
     .error-banner {
-      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      background: #fef2f2;
       border: 1px solid #f87171;
       border-radius: 12px;
       padding: 1rem;
@@ -473,7 +460,7 @@ import { QueryState } from '../../services/query.service';
     .section-icon {
       width: 32px;
       height: 32px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #3b82f6;
       border-radius: 8px;
       display: flex;
       align-items: center;
@@ -492,6 +479,12 @@ import { QueryState } from '../../services/query.service';
     .form-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .form-grid-three {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       gap: 1.5rem;
     }
 
@@ -599,7 +592,7 @@ import { QueryState } from '../../services/query.service';
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #3b82f6;
       color: white;
     }
 
@@ -624,7 +617,7 @@ import { QueryState } from '../../services/query.service';
 
     /* Success Banner */
     .success-banner {
-      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      background: #f0fdf4;
       border: 1px solid #34d399;
       border-radius: 12px;
       padding: 1rem;
@@ -683,12 +676,22 @@ import { QueryState } from '../../services/query.service';
     }
 
     /* Responsive Design */
+    @media (max-width: 1024px) {
+      .form-grid-three {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
     @media (max-width: 768px) {
       .account-container {
         padding: 1rem;
       }
 
       .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid-three {
         grid-template-columns: 1fr;
       }
 

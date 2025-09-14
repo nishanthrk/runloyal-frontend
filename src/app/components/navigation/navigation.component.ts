@@ -9,7 +9,7 @@ import { Subscription } from 'rxjs';
   template: `
     <nav class="glass-nav sticky top-0 z-50">
       <div class="nav-content">
-        <a routerLink="/todos" class="nav-brand">RunLoyal</a>
+        <a routerLink="/todos" class="nav-brand">RL Frontend</a>
         <ul class="nav-links" *ngIf="isAuthenticated">
           <li><a routerLink="/todos" [class.active]="activeRoute === '/todos'">Todos</a></li>
           <li><a routerLink="/dogs" [class.active]="activeRoute === '/dogs'">Dogs</a></li>
