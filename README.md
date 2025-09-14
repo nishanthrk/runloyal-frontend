@@ -1,58 +1,92 @@
 # RL Frontend - Angular Application
 
-A modern Angular 14+ frontend application featuring three main pages with different functionalities and APIs.
+A modern Angular 14+ frontend application with three main pages: Todo List, Dog Gallery, and Account Management. Features include infinite scroll, authentication, and a clean blue-themed UI.
 
-## Features
+## 🚀 Features
 
-### 📝 Page 1: Todo List with Pagination
-- **API**: [DummyJSON Todos API](https://dummyjson.com/docs/todos#todos-all)
-- **Features**:
-  - Lazy loading with pagination
-  - Interactive todo items with checkboxes
-  - Responsive pagination controls
-  - Loading states and error handling
-  - Real-time todo completion toggle
+### 📝 Todo List Page
+- **Infinite Scroll**: Lazy loading with pagination using DummyJSON API
+- **Real-time Stats**: Shows loaded todos count and total todos
+- **Modern UI**: Clean design with glassmorphism effects
 
-### 🐕 Page 2: Dog Gallery
-- **API**: [Dog CEO API](https://dog.ceo/api/breeds/image/random)
-- **Features**:
-  - Fetches 10 random dog images simultaneously
-  - Beautiful card-based gallery layout
-  - Responsive grid design
-  - Error handling for failed image loads
-  - Breed name extraction and formatting
+![Todo List Page](screenshot/3_todo_page.png)
 
-### 👤 Page 3: Account Details Form
-- **Features**:
-  - Comprehensive form validation
-  - Personal information section
-  - Account settings with password confirmation
-  - User preferences
-  - Real-time validation feedback
-  - Form submission handling
+### 🐕 Dog Gallery Page
+- **Masonry Layout**: Pinterest-style staggered grid layout
+- **Infinite Scroll**: Loads more dogs as you scroll
+- **Search Functionality**: Filter dogs by breed or characteristics
+- **Shimmer Loading**: Beautiful loading animations for individual cards
+- **Hover Effects**: Interactive tooltips and image scaling
 
-## Technologies Used
+![Dog Gallery Page](screenshot/4_dog_gallary_page.png)
 
-- **Angular 14+** - Frontend framework
-- **TypeScript** - Programming language
-- **RxJS** - Reactive programming
-- **Angular Reactive Forms** - Form handling and validation
-- **Angular Router** - Navigation
-- **Angular HttpClient** - API communication
-- **CSS3** - Modern styling with Flexbox and Grid
+### 👤 Account Management Page
+- **Three-Column Layout**: Organized form with Personal and Address information
+- **Form Validation**: Comprehensive validation with error messages
+- **Profile Updates**: Real-time profile updates with optimistic UI
+- **TanStack Query-like State Management**: Advanced caching and state management
+- **Professional Design**: Clean, business-like interface
 
-## Getting Started
+![Account Page](screenshot/5_account_page.png)
+
+### 🔐 Authentication System
+- **Login/Register**: Secure authentication with JWT tokens
+- **Google OAuth2**: Social login integration
+- **Token Management**: Automatic token refresh and logout
+- **Route Protection**: Auth guards for protected pages
+
+![Login Page](screenshot/2_login_page.png)
+
+![Register Page](screenshot/1_register_page.png)
+
+## 🛠️ Technical Stack
+
+- **Framework**: Angular 14+
+- **Styling**: Tailwind CSS with custom components
+- **State Management**: Custom Query Service (TanStack Query equivalent)
+- **HTTP Client**: Angular HttpClient with interceptors
+- **Authentication**: JWT with refresh tokens
+- **APIs**: 
+  - DummyJSON (Todos)
+  - Dog CEO API (Dog images)
+  - Custom Backend (Authentication & Profile)
+
+## 📁 Project Structure
+
+```
+src/
+├── app/
+│   ├── components/
+│   │   └── navigation/          # Global navigation component
+│   ├── pages/
+│   │   ├── todo-list/          # Todo list with infinite scroll
+│   │   ├── dog-gallery/        # Dog gallery with masonry layout
+│   │   ├── account-form/       # Account management form
+│   │   ├── login/              # Authentication pages
+│   │   └── oauth2-callback/    # OAuth2 redirect handler
+│   ├── services/
+│   │   ├── auth.service.ts     # Authentication service
+│   │   ├── user-profile.service.ts # Profile management
+│   │   └── query.service.ts    # State management service
+│   ├── guards/
+│   │   └── auth.guard.ts       # Route protection
+│   └── app.routes.ts           # Application routing
+├── styles.css                  # Global styles and Tailwind config
+└── polyfills.ts               # Browser compatibility
+```
+
+## 🚀 Getting Started
 
 ### Prerequisites
-
 - Node.js (v14 or higher)
-- npm or yarn package manager
-- Angular CLI (v14 or higher)
+- npm or yarn
+- Angular CLI
 
 ### Installation
 
-1. **Clone or download the project**
+1. **Clone the repository**
    ```bash
+   git clone <repository-url>
    cd rl-frontend
    ```
 
@@ -61,136 +95,176 @@ A modern Angular 14+ frontend application featuring three main pages with differ
    npm install
    ```
 
-3. **Install Angular CLI globally** (if not already installed)
-   ```bash
-   npm install -g @angular/cli@14
-   ```
-
-4. **Start the development server**
+3. **Start the development server**
    ```bash
    npm start
    # or
    ng serve
    ```
 
-5. **Open your browser**
+4. **Open your browser**
    Navigate to `http://localhost:4200`
 
-### Build for Production
+## 🔧 Configuration
 
+### Backend APIs
+The application connects to the following backend services:
+
+- **Authentication Service**: `http://localhost:8081/api/auth`
+- **User Profile Service**: `http://localhost:8082/api/users`
+
+### Environment Variables
+Create environment files for different configurations:
+
+```typescript
+// src/environments/environment.ts
+export const environment = {
+  production: false,
+  authApiUrl: 'http://localhost:8081/api/auth',
+  profileApiUrl: 'http://localhost:8082/api/users'
+};
+```
+
+## 🎨 Design System
+
+### Color Scheme
+- **Primary Blue**: `#3b82f6` (blue-500)
+- **Hover Blue**: `#2563eb` (blue-600)
+- **Background**: `#f8fafc` (slate-50)
+- **Text**: `#1e293b` (slate-800)
+
+### Components
+- **Glassmorphism**: Backdrop blur effects with transparency
+- **Responsive Grid**: Three-column layout on desktop, responsive on mobile
+- **Loading States**: Shimmer effects and spinners
+- **Form Validation**: Real-time validation with error messages
+
+## 🔐 Authentication Flow
+
+### Login Process
+1. User enters credentials
+2. API call to `/api/auth/login`
+3. JWT tokens stored in localStorage
+4. User state updated
+5. Redirect to protected pages
+
+### Logout Process
+1. API call to `/api/auth/logout` with refresh token
+2. Backend invalidates refresh token
+3. Local storage cleared
+4. User state reset
+5. Redirect to login page
+
+### OAuth2 Flow
+1. Redirect to Google OAuth2 provider
+2. User authorizes application
+3. Callback with authorization code
+4. Exchange code for tokens
+5. Store tokens and update user state
+
+## 📊 State Management
+
+### Query Service
+Custom implementation inspired by TanStack Query:
+
+- **Caching**: Automatic data caching with TTL
+- **Background Refetching**: Updates stale data
+- **Optimistic Updates**: Immediate UI feedback
+- **Error Handling**: Automatic retry with exponential backoff
+- **Cache Invalidation**: Manual and automatic cache updates
+
+### Usage Example
+```typescript
+// Get user profile with caching
+this.userProfile$ = this.userProfileService.getUserProfile();
+
+// Update profile with optimistic updates
+this.userProfileService.updateProfile(data).subscribe({
+  next: (result) => console.log('Updated:', result),
+  error: (error) => console.error('Error:', error)
+});
+```
+
+## 🧪 Testing
+
+### Unit Tests
 ```bash
-npm run build
-# or
-ng build --prod
-```
-
-The build artifacts will be stored in the `dist/` directory.
-
-## Project Structure
-
-```
-src/
-├── app/
-│   ├── components/
-│   │   └── navigation/
-│   │       └── navigation.component.ts
-│   ├── pages/
-│   │   ├── todo-list/
-│   │   │   └── todo-list.component.ts
-│   │   ├── dog-gallery/
-│   │   │   └── dog-gallery.component.ts
-│   │   └── account-form/
-│   │       └── account-form.component.ts
-│   ├── app.component.ts
-│   ├── app.module.ts
-│   └── app.routes.ts
-├── styles.css
-├── index.html
-└── main.ts
-```
-
-## API Endpoints Used
-
-### DummyJSON Todos API
-- **Base URL**: `https://dummyjson.com/todos`
-- **Features**: Pagination, filtering, CRUD operations
-- **Usage**: Fetches paginated todo items with lazy loading
-
-### Dog CEO API
-- **Base URL**: `https://dog.ceo/api/breeds/image/random`
-- **Features**: Random dog images, breed information
-- **Usage**: Fetches 10 random dog images for gallery display
-
-## Form Validation Rules
-
-### Personal Information
-- **First Name**: Required, minimum 2 characters
-- **Last Name**: Required, minimum 2 characters
-- **Email**: Required, valid email format
-- **Phone**: Optional, valid phone number pattern
-
-### Account Settings
-- **Username**: Required, minimum 3 characters, alphanumeric and underscores only
-- **Password**: Required, minimum 8 characters, must contain uppercase, lowercase, and number
-- **Confirm Password**: Required, must match password
-
-### Preferences
-- **Date of Birth**: Optional, cannot be in the future
-- **Country**: Optional dropdown selection
-- **Newsletter**: Optional checkbox
-
-## Styling Features
-
-- **Modern Design**: Clean, professional interface
-- **Responsive Layout**: Works on desktop, tablet, and mobile
-- **Interactive Elements**: Hover effects, transitions, and animations
-- **Loading States**: Spinners and loading indicators
-- **Error Handling**: User-friendly error messages
-- **Accessibility**: Proper form labels and ARIA attributes
-
-## Browser Support
-
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-
-## Development
-
-### Running Tests
-```bash
-npm test
-# or
 ng test
 ```
 
-### Code Linting
+### E2E Tests
+```bash
+ng e2e
+```
+
+### Linting
 ```bash
 ng lint
 ```
 
-## Deployment
+## 📱 Responsive Design
 
-The application can be deployed to any static hosting service:
+The application is fully responsive with breakpoints:
 
-- **Netlify**: Drag and drop the `dist/` folder
-- **Vercel**: Connect your GitHub repository
-- **GitHub Pages**: Use Angular CLI build and deploy
-- **AWS S3**: Upload the `dist/` folder contents
+- **Desktop**: 3-column layout for forms
+- **Tablet** (≤1024px): 2-column layout
+- **Mobile** (≤768px): Single column layout
 
-## Contributing
+## 🔄 API Integration
+
+### Todo List
+- **Endpoint**: `https://dummyjson.com/todos`
+- **Features**: Pagination, infinite scroll
+- **Data**: Todo items with completion status
+
+### Dog Gallery
+- **Endpoint**: `https://dog.ceo/api/breeds/image/random`
+- **Features**: Random dog images, search functionality
+- **Data**: Dog images with breed information
+
+### User Profile
+- **GET**: `/api/users/{userId}` - Fetch user profile
+- **PUT**: `/api/users/{userId}/profile` - Update profile
+- **Features**: Caching, optimistic updates, retry logic
+
+## 🚀 Deployment
+
+### Build for Production
+```bash
+ng build --configuration production
+```
+
+### Docker Deployment
+```dockerfile
+FROM node:16-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 4200
+CMD ["npm", "start"]
+```
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Add tests if applicable
 5. Submit a pull request
 
-## License
+## 📄 License
 
-This project is open source and available under the [MIT License](LICENSE).
+This project is licensed under the MIT License.
 
-## Support
+## 🆘 Support
 
-For support or questions, please open an issue in the repository or contact the development team.
+For support and questions:
+- Create an issue in the repository
+- Check the documentation
+- Review the code comments
 
+---
+
+**Built with ❤️ using Angular and modern web technologies**
